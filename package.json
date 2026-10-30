@@ -1,0 +1,41 @@
+{
+  "name": "infer-types-from-schemas",
+  "version": "0.1.0",
+  "description": "Infer TypeScript types from schemas",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prettier": "prettier --write \"src/**/*.ts\"",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/config": "^3.3.5",
+    "@types/node": "^26.6.5",
+    "@vitest/eslint-plugin": "^1.6.27",
+    "clinic": "^13.0.0",
+    "eslint": "^9.39.5",
+    "jiti": "^2.7.0",
+    "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^3.2.7"
+  },
+  "dependencies": {
+    "config": "^5.0.1",
+    "dotenv": "^18.0.9",
+    "winston": "^3.19.0"
+  }
+}
