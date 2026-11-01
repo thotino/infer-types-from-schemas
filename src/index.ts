@@ -9,22 +9,20 @@ type PrimitiveTypeMap = {
     [BaseTypes.STRING]: string;
 };
 type SchemaTypeKey = "type";
-type SchemaBase<Item extends BaseTypes> = {
-    optional?: boolean;
+type BaseSchema = { optional?: boolean };
+type PrimitiveSchema<Item extends BaseTypes> = BaseSchema & {
     type: Item;
 };
-type ArraySchemaBase<ItemType> = {
+type ArraySchema<ItemType> = BaseSchema & {
     type: "array";
     items: ItemType;
-    optional?: boolean;
 };
-type UnionSchema = {
+type UnionSchema = BaseSchema & {
     type: [
         keyof PrimitiveTypeMap,
         keyof PrimitiveTypeMap,
         ...(keyof PrimitiveTypeMap)[],
     ];
-    optional?: boolean;
 };
 const stringSchema = {
     type: BaseTypes.STRING,
@@ -37,17 +35,17 @@ const booleanSchema = {
 } as const;
 function optional<
     T extends
-        | SchemaBase<BaseTypes>
+        | PrimitiveSchema<BaseTypes>
         | UnionSchema
-        | ArraySchemaBase<SchemaBase<BaseTypes>>,
->(schema: T): Readonly<{ optional: true; type: T[SchemaTypeKey] }> {
-    return { optional: true, type: schema.type };
+        | ArraySchema<PrimitiveSchema<BaseTypes>>,
+>(schema: T): Readonly<{ optional: true; type: T[SchemaTypeKey]; items: T }> {
+    return { optional: true, type: schema.type, items: schema };
 }
 function array<
     T extends
-        | SchemaBase<BaseTypes>
+        | PrimitiveSchema<BaseTypes>
         | UnionSchema
-        | ArraySchemaBase<SchemaBase<BaseTypes>>,
+        | ArraySchema<PrimitiveSchema<BaseTypes>>,
 >(schema: T): Readonly<{ type: "array"; items: T }> {
     return {
         type: "array",
@@ -55,11 +53,16 @@ function array<
     };
 }
 function union<
-    T extends SchemaBase<BaseTypes>,
-    U extends SchemaBase<BaseTypes>,
->(firstSchema: T, secondSchema: U): Readonly<{ type: [T["type"], U["type"]] }> {
+    T extends PrimitiveSchema<BaseTypes>,
+    U extends PrimitiveSchema<BaseTypes>,
+>(
+    firstSchema: T,
+    secondSchema: U,
+): Readonly<{ type: [T[SchemaTypeKey], U[SchemaTypeKey]] }> {
     return { type: [firstSchema.type, secondSchema.type] };
 }
+
+function object(params: Record<string, PrimitiveSchema<BaseTypes>>) {}
 
 const optionalString = optional(stringSchema);
 const stringArray = array(stringSchema);
@@ -68,27 +71,15 @@ const idSchema = union(stringSchema, numberSchema);
 const complexSchema = array(union(stringSchema, booleanSchema));
 
 type OptionalTString = typeof optionalString;
-type IsString<T> =
-    T extends Readonly<{ type: BaseTypes.STRING }> ? true : false;
-type IsNumber<T> =
-    T extends Readonly<{ type: BaseTypes.NUMBER }> ? true : false;
-type IsBoolean<T> =
-    T extends Readonly<{ type: BaseTypes.BOOLEAN }> ? true : false;
 
 type ExtractType<T> = T extends keyof PrimitiveTypeMap
     ? PrimitiveTypeMap[T]
     : never;
 
 type IsPrimitive<T> =
-    IsString<T> extends true
-        ? true
-        : IsNumber<T> extends true
-          ? true
-          : IsBoolean<T> extends true
-            ? true
-            : false;
+    T extends Readonly<{ type: keyof PrimitiveTypeMap }> ? true : false;
 type ExtractPrimitive<T> =
-    T extends SchemaBase<infer I> ? ExtractType<I> : never;
+    T extends PrimitiveSchema<infer I> ? ExtractType<I> : never;
 
 type IsOptional<T> = T extends Readonly<{ optional: true }> ? true : false;
 type ApplyOptional<T> = T | undefined;
@@ -97,7 +88,7 @@ type ApplySchemaOptionality<S, V> =
     IsOptional<S> extends true ? ApplyOptional<V> : V;
 
 type IsArray<T> = T extends Readonly<{ type: "array" }> ? true : false;
-type ExtractArray<T> = T extends ArraySchemaBase<infer I> ? Infer<I>[] : never;
+type ExtractArray<T> = T extends ArraySchema<infer I> ? Infer<I>[] : never;
 
 type IsUnion<T> =
     T extends Readonly<{
