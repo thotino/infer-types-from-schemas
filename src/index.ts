@@ -113,7 +113,7 @@ export type Infer<T> =
           ? ExtractUnion<T>
           : IsArray<T> extends true
             ? ExtractArray<T>
-            : null;
+            : IsOptional<T> extends true ? ExtractOptional<T>;
 
 type A = Infer<typeof stringSchema>; // string
 type B = Infer<typeof numberSchema>; // number
