@@ -16,7 +16,15 @@ type SchemaBase<Item extends BaseTypes> = {
 type ArraySchemaBase<ItemType> = {
     type: "array";
     items: ItemType;
-    optional?: boolean
+    optional?: boolean;
+};
+type UnionSchema = {
+    type: [
+        keyof PrimitiveTypeMap,
+        keyof PrimitiveTypeMap,
+        ...(keyof PrimitiveTypeMap)[],
+    ];
+    optional?: boolean;
 };
 const stringSchema = {
     type: BaseTypes.STRING,
@@ -33,7 +41,10 @@ function optional<T extends SchemaBase<BaseTypes>>(
     return { optional: true, type: schema.type };
 }
 function array<
-    T extends SchemaBase<BaseTypes> | ArraySchemaBase<SchemaBase<BaseTypes>>,
+    T extends
+        | SchemaBase<BaseTypes>
+        | UnionSchema
+        | ArraySchemaBase<SchemaBase<BaseTypes>>,
 >(schema: T): Readonly<{ type: "array"; items: T }> {
     return {
         type: "array",
@@ -43,14 +54,17 @@ function array<
 function union<
     T extends SchemaBase<BaseTypes>,
     U extends SchemaBase<BaseTypes>,
->(firstSchema: T, secondSchema: U): Readonly<{ type: T["type"] | U["type"] }> {
-    return { type: `${firstSchema.typetype} | ${secondSchema.type}` };
+>(firstSchema: T, secondSchema: U): Readonly<{ type: [T["type"], U["type"]] }> {
+    return { type: [firstSchema.type, secondSchema.type] };
 }
+
 const optionalString = optional(stringSchema);
 const stringArray = array(stringSchema);
 const nestedArray = array(array(stringSchema));
 const idSchema = union(stringSchema, numberSchema);
-type OptionalTString = typeof idSchema;
+const complexSchema = array(union(stringSchema, booleanSchema));
+
+type OptionalTString = typeof optionalString;
 type IsString<T> =
     T extends Readonly<{ type: BaseTypes.STRING }> ? true : false;
 type IsNumber<T> =
@@ -74,24 +88,32 @@ type ExtractPrimitive<T> =
     T extends SchemaBase<infer I> ? ExtractType<I> : never;
 
 type IsOptional<T> = T extends Readonly<{ optional: true }> ? true : false;
-type ExtractOptional<T> = T extends SchemaBase<infer I> ? I | undefined : never;
+type ExtractOptional<T> = T | undefined;
 
 type IsArray<T> = T extends Readonly<{ type: "array" }> ? true : false;
-type ExtractArray<T> =
-    T extends ArraySchemaBase<infer I>
-        ? IsPrimitive<I> extends true
-            ? ExtractPrimitive<I>[]
-            : ExtractArray<I>[]
-        : never;
+type ExtractArray<T> = T extends ArraySchemaBase<infer I> ? Infer<I>[] : never;
 
-type IsUnion<T> = T extends Readonly<{}> ? true : false;
+type IsUnion<T> =
+    T extends Readonly<{
+        type: [
+            keyof PrimitiveTypeMap,
+            keyof PrimitiveTypeMap,
+            ...(keyof PrimitiveTypeMap)[],
+        ];
+    }>
+        ? true
+        : false;
+type ExtractUnion<T> =
+    T extends Readonly<{ type: [...(infer I)[]] }> ? ExtractType<I> : never;
 
 export type Infer<T> =
     IsPrimitive<T> extends true
         ? ExtractPrimitive<T>
-        : IsArray<T> extends true
-          ? ExtractArray<T>
-          : never;
+        : IsUnion<T> extends true
+          ? ExtractUnion<T>
+          : IsArray<T> extends true
+            ? ExtractArray<T>
+            : null;
 
 type A = Infer<typeof stringSchema>; // string
 type B = Infer<typeof numberSchema>; // number
@@ -100,3 +122,4 @@ type D = Infer<typeof optionalString>; // string | undefined
 type E = Infer<typeof stringArray>; // string[]
 type F = Infer<typeof nestedArray>; // string[][]
 type G = Infer<typeof idSchema>; // string | number
+type H = Infer<typeof complexSchema>; // (string | number)[]
