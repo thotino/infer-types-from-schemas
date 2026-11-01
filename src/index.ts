@@ -35,9 +35,12 @@ const numberSchema = {
 const booleanSchema = {
     type: BaseTypes.BOOLEAN,
 } as const;
-function optional<T extends SchemaBase<BaseTypes>>(
-    schema: T,
-): Readonly<{ optional: true; type: T[SchemaTypeKey] }> {
+function optional<
+    T extends
+        | SchemaBase<BaseTypes>
+        | UnionSchema
+        | ArraySchemaBase<SchemaBase<BaseTypes>>,
+>(schema: T): Readonly<{ optional: true; type: T[SchemaTypeKey] }> {
     return { optional: true, type: schema.type };
 }
 function array<
@@ -88,7 +91,10 @@ type ExtractPrimitive<T> =
     T extends SchemaBase<infer I> ? ExtractType<I> : never;
 
 type IsOptional<T> = T extends Readonly<{ optional: true }> ? true : false;
-type ExtractOptional<T> = T | undefined;
+type ApplyOptional<T> = T | undefined;
+
+type ApplySchemaOptionality<S, V> =
+    IsOptional<S> extends true ? ApplyOptional<V> : V;
 
 type IsArray<T> = T extends Readonly<{ type: "array" }> ? true : false;
 type ExtractArray<T> = T extends ArraySchemaBase<infer I> ? Infer<I>[] : never;
@@ -108,12 +114,12 @@ type ExtractUnion<T> =
 
 export type Infer<T> =
     IsPrimitive<T> extends true
-        ? ExtractPrimitive<T>
+        ? ApplySchemaOptionality<T, ExtractPrimitive<T>>
         : IsUnion<T> extends true
-          ? ExtractUnion<T>
+          ? ApplySchemaOptionality<T, ExtractUnion<T>>
           : IsArray<T> extends true
-            ? ExtractArray<T>
-            : IsOptional<T> extends true ? ExtractOptional<T>;
+            ? ApplySchemaOptionality<T, ExtractArray<T>>
+            : never;
 
 type A = Infer<typeof stringSchema>; // string
 type B = Infer<typeof numberSchema>; // number
