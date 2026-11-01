@@ -13,9 +13,9 @@ type BaseSchema = { optional?: boolean };
 type PrimitiveSchema<Item extends BaseTypes> = BaseSchema & {
     type: Item;
 };
-type ArraySchema<ItemType> = BaseSchema & {
+type ArraySchema<Item> = BaseSchema & {
     type: "array";
-    items: ItemType;
+    items: Item;
 };
 type UnionSchema = BaseSchema & {
     type: [
@@ -24,7 +24,14 @@ type UnionSchema = BaseSchema & {
         ...(keyof PrimitiveTypeMap)[],
     ];
 };
-const stringSchema = {
+type ObjectSchema = BaseSchema & {
+    type: "object";
+    properties: Record<
+        string,
+        PrimitiveSchema<BaseTypes> | ArraySchema<BaseTypes> | UnionSchema
+    >;
+};
+const stringSchema: PrimitiveSchema<BaseTypes.STRING> = {
     type: BaseTypes.STRING,
 } as const;
 const numberSchema = {
@@ -62,15 +69,30 @@ function union<
     return { type: [firstSchema.type, secondSchema.type] };
 }
 
-function object(params: Record<string, PrimitiveSchema<BaseTypes>>) {}
+function object<
+    T extends
+        | PrimitiveSchema<BaseTypes>
+        | UnionSchema
+        | ArraySchema<PrimitiveSchema<BaseTypes>>,
+>(
+    params: Record<string, T>,
+): Readonly<{ type: "object"; properties: Record<string, T> }> {
+    return { type: "object", properties: { ...params } };
+}
 
 const optionalString = optional(stringSchema);
 const stringArray = array(stringSchema);
 const nestedArray = array(array(stringSchema));
 const idSchema = union(stringSchema, numberSchema);
 const complexSchema = array(union(stringSchema, booleanSchema));
+const userSchema = object({
+    id: numberSchema,
+    name: stringSchema,
+    email: optional(stringSchema),
+    roles: array(stringSchema),
+});
 
-type OptionalTString = typeof optionalString;
+type OptionalTString = typeof nestedArray;
 
 type ExtractType<T> = T extends keyof PrimitiveTypeMap
     ? PrimitiveTypeMap[T]
