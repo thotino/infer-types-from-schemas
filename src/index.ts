@@ -13,10 +13,14 @@ type BaseSchema = { optional?: boolean };
 type PrimitiveSchema<Item extends BaseTypes> = BaseSchema & {
     type: Item;
 };
-type ArraySchema<Item> = BaseSchema & {
+interface ArraySchema<Item> extends BaseSchema {
     type: "array";
     items: Item;
-};
+}
+interface ObjectSchema<Item> extends BaseSchema {
+    type: "object";
+    properties: { [x: string]: Item };
+}
 type UnionSchema = BaseSchema & {
     type: [
         keyof PrimitiveTypeMap,
@@ -24,13 +28,9 @@ type UnionSchema = BaseSchema & {
         ...(keyof PrimitiveTypeMap)[],
     ];
 };
-// type ObjectSchema = BaseSchema & {
-//     type: "object";
-//     properties: Record<
-//         string,
-//         PrimitiveSchema<BaseTypes> | ArraySchema<BaseTypes> | UnionSchema
-//     >;
-// };
+type Schema =
+    PrimitiveSchema<BaseTypes> | ArraySchema<Schema> | ObjectSchema<Schema>;
+
 export const stringSchema = {
     type: BaseTypes.STRING,
 } as const;
@@ -49,10 +49,7 @@ export function array<T>(schema: T): Readonly<{ type: "array"; items: T }> {
         items: { ...schema },
     };
 }
-export function union<
-    T extends PrimitiveSchema<BaseTypes>,
-    U extends PrimitiveSchema<BaseTypes>,
->(
+export function union<T extends Schema, U extends Schema>(
     firstSchema: T,
     secondSchema: U,
 ): Readonly<{ type: [T[SchemaTypeKey], U[SchemaTypeKey]] }> {
@@ -65,10 +62,10 @@ export function object<T>(
     return { type: "object", properties: { ...params } };
 }
 
-export function partial<T extends PrimitiveSchema<BaseTypes>>(
+export function partial<T>(
     schema: T,
-): Readonly<{ partial: true; type: T[SchemaTypeKey] }> {
-    return { partial: true, type: schema.type };
+): Readonly<{ partial: true } & T> {
+    return { partial: true, ...schema };
 }
 
 type ExtractType<T> = T extends keyof PrimitiveTypeMap
