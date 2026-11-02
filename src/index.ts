@@ -21,14 +21,7 @@ interface ObjectSchema<Item> extends BaseSchema {
     type: "object";
     properties: { [x: string]: Item };
 }
-type UnionSchema = BaseSchema & {
-    type: [
-        keyof PrimitiveTypeMap,
-        keyof PrimitiveTypeMap,
-        ...(keyof PrimitiveTypeMap)[],
-    ];
-};
-type Schema =
+export type Schema =
     PrimitiveSchema<BaseTypes> | ArraySchema<Schema> | ObjectSchema<Schema>;
 
 export const stringSchema = {
@@ -49,7 +42,10 @@ export function array<T>(schema: T): Readonly<{ type: "array"; items: T }> {
         items: { ...schema },
     };
 }
-export function union<T extends Schema, U extends Schema>(
+export function union<
+    T extends PrimitiveSchema<BaseTypes>,
+    U extends PrimitiveSchema<BaseTypes>,
+>(
     firstSchema: T,
     secondSchema: U,
 ): Readonly<{ type: [T[SchemaTypeKey], U[SchemaTypeKey]] }> {
@@ -62,9 +58,7 @@ export function object<T>(
     return { type: "object", properties: { ...params } };
 }
 
-export function partial<T>(
-    schema: T,
-): Readonly<{ partial: true } & T> {
+export function partial<T>(schema: T): Readonly<{ partial: true } & T> {
     return { partial: true, ...schema };
 }
 
