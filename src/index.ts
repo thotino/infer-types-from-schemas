@@ -135,14 +135,6 @@ type ExtractObject<T> =
     T extends Readonly<{ properties: infer I }> ? InferTypeMapper<I> : never;
 type IsPartialProperty<T> =
     T extends Readonly<{ partial: true }> ? true : false;
-type PartialTypeMapper<T, K extends keyof T> = {
-    [P in K]?: Infer<T[P]>;
-};
-// type InferTypeMapper<T> = {
-//     [K in keyof T]?: IsPartialProperty<T[K]> extends true
-//         ? InferPartialPropertyTypeMapper<T, K>[K]
-//         : InferNonPartialPropertyTypeMapper<T, K>[K];
-// };
 type InferPartialPropertyTypeMapper<T, K extends keyof T> = {
     [P in K]?: Infer<T[P]>;
 };
@@ -158,12 +150,6 @@ type NonPartialKeys<T> = {
 type SelectPartialKeys<T> = InferPartialPropertyTypeMapper<T, PartialKeys<T>>
 type SelectNonPartialKeys<T> = InferNonPartialPropertyTypeMapper<T, NonPartialKeys<T>>
 type InferTypeMapper<T> = SelectNonPartialKeys<T> & SelectPartialKeys<T>;
-// type IsPartialTest = IsPartialProperty<typeof userSchema.properties.nickname>;
-// type PartialTest = PartialTypeMapper<typeof userSchema.properties, "nickname">;
-// type UserPartialKeys = PartialKeys<typeof userSchema.properties>
-// type SelectPartialUser = SelectPartialKeys<typeof userSchema.properties>;
-// type SelectNonPartialUser = SelectNonPartialKeys<typeof userSchema.properties>;
-// type SelectUser = SelectNonPartialKeys<typeof userSchema.properties> & SelectPartialKeys<typeof userSchema.properties>;
 
 export type Infer<T> =
     IsPrimitive<T> extends true
