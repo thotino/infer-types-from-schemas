@@ -18,7 +18,7 @@
     "build": "tsc -p tsconfig.json",
     "prettier": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run --typecheck"
   },
   "devDependencies": {
     "@types/config": "^3.3.5",
