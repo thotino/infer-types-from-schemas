@@ -31,16 +31,16 @@ type ObjectSchema = BaseSchema & {
         PrimitiveSchema<BaseTypes> | ArraySchema<BaseTypes> | UnionSchema
     >;
 };
-const stringSchema: PrimitiveSchema<BaseTypes.STRING> = {
+export const stringSchema = {
     type: BaseTypes.STRING,
 } as const;
-const numberSchema = {
+export const numberSchema = {
     type: BaseTypes.NUMBER,
 } as const;
-const booleanSchema = {
+export const booleanSchema = {
     type: BaseTypes.BOOLEAN,
 } as const;
-function optional<
+export function optional<
     T extends
         | PrimitiveSchema<BaseTypes>
         | UnionSchema
@@ -48,7 +48,7 @@ function optional<
 >(schema: T): Readonly<{ optional: true; type: T[SchemaTypeKey]; items: T }> {
     return { optional: true, type: schema.type, items: schema };
 }
-function array<
+export function array<
     T extends
         | PrimitiveSchema<BaseTypes>
         | UnionSchema
@@ -59,7 +59,7 @@ function array<
         items: { ...schema, type: schema.type, optional: schema.optional },
     };
 }
-function union<
+export function union<
     T extends PrimitiveSchema<BaseTypes>,
     U extends PrimitiveSchema<BaseTypes>,
 >(
@@ -69,15 +69,14 @@ function union<
     return { type: [firstSchema.type, secondSchema.type] };
 }
 
-function object<
-    T extends
-        | PrimitiveSchema<BaseTypes>
-        | UnionSchema
-        | ArraySchema<PrimitiveSchema<BaseTypes>>,
->(
-    params: Record<string, T>,
-): Readonly<{ type: "object"; properties: Record<string, T> }> {
+export function object<T>(params: T): Readonly<{ type: "object"; properties: T }> {
     return { type: "object", properties: { ...params } };
+}
+
+export function partial<T extends PrimitiveSchema<BaseTypes>>(
+    schema: T,
+): Readonly<{ partial: true; type: T[SchemaTypeKey] }> {
+    return { partial: true, type: schema.type };
 }
 
 const optionalString = optional(stringSchema);
@@ -90,9 +89,15 @@ const userSchema = object({
     name: stringSchema,
     email: optional(stringSchema),
     roles: array(stringSchema),
+    nickname: partial(stringSchema),
+});
+const productSchema = object({
+    name: stringSchema,
+    price: numberSchema,
+    available: booleanSchema,
 });
 
-type OptionalTString = typeof nestedArray;
+type OptionalTString = typeof userSchema;
 
 type ExtractType<T> = T extends keyof PrimitiveTypeMap
     ? PrimitiveTypeMap[T]
@@ -125,6 +130,41 @@ type IsUnion<T> =
 type ExtractUnion<T> =
     T extends Readonly<{ type: [...(infer I)[]] }> ? ExtractType<I> : never;
 
+type IsObject<T> = T extends Readonly<{ type: "object" }> ? true : false;
+type ExtractObject<T> =
+    T extends Readonly<{ properties: infer I }> ? InferTypeMapper<I> : never;
+type IsPartialProperty<T> =
+    T extends Readonly<{ partial: true }> ? true : false;
+type PartialTypeMapper<T, K extends keyof T> = {
+    [P in K]?: Infer<T[P]>;
+};
+// type InferTypeMapper<T> = {
+//     [K in keyof T]?: IsPartialProperty<T[K]> extends true
+//         ? InferPartialPropertyTypeMapper<T, K>[K]
+//         : InferNonPartialPropertyTypeMapper<T, K>[K];
+// };
+type InferPartialPropertyTypeMapper<T, K extends keyof T> = {
+    [P in K]?: Infer<T[P]>;
+};
+type InferNonPartialPropertyTypeMapper<T, K extends keyof T> = {
+    [P in K]: Infer<T[P]>;
+};
+type PartialKeys<T> = {
+    [K in keyof T]: IsPartialProperty<T[K]> extends true ? K : never;
+}[keyof T];
+type NonPartialKeys<T> = {
+    [K in keyof T]: IsPartialProperty<T[K]> extends false ? K : never;
+}[keyof T];
+type SelectPartialKeys<T> = InferPartialPropertyTypeMapper<T, PartialKeys<T>>
+type SelectNonPartialKeys<T> = InferNonPartialPropertyTypeMapper<T, NonPartialKeys<T>>
+type InferTypeMapper<T> = SelectNonPartialKeys<T> & SelectPartialKeys<T>;
+// type IsPartialTest = IsPartialProperty<typeof userSchema.properties.nickname>;
+// type PartialTest = PartialTypeMapper<typeof userSchema.properties, "nickname">;
+// type UserPartialKeys = PartialKeys<typeof userSchema.properties>
+// type SelectPartialUser = SelectPartialKeys<typeof userSchema.properties>;
+// type SelectNonPartialUser = SelectNonPartialKeys<typeof userSchema.properties>;
+// type SelectUser = SelectNonPartialKeys<typeof userSchema.properties> & SelectPartialKeys<typeof userSchema.properties>;
+
 export type Infer<T> =
     IsPrimitive<T> extends true
         ? ApplySchemaOptionality<T, ExtractPrimitive<T>>
@@ -132,7 +172,9 @@ export type Infer<T> =
           ? ApplySchemaOptionality<T, ExtractUnion<T>>
           : IsArray<T> extends true
             ? ApplySchemaOptionality<T, ExtractArray<T>>
-            : never;
+            : IsObject<T> extends true
+              ? ApplySchemaOptionality<T, ExtractObject<T>>
+              : never;
 
 type A = Infer<typeof stringSchema>; // string
 type B = Infer<typeof numberSchema>; // number
@@ -142,3 +184,5 @@ type E = Infer<typeof stringArray>; // string[]
 type F = Infer<typeof nestedArray>; // string[][]
 type G = Infer<typeof idSchema>; // string | number
 type H = Infer<typeof complexSchema>; // (string | number)[]
+type User = Infer<typeof userSchema>;
+type Product = Infer<typeof productSchema>;
