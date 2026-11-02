@@ -4,6 +4,7 @@ import {
     booleanSchema,
     numberSchema,
     object,
+    optional,
     partial,
     stringSchema,
     union,
@@ -17,7 +18,55 @@ describe("Infer", () => {
             age: numberSchema,
         });
         type User = Infer<typeof schema>;
-        expectTypeOf<User>().toExtend<{ name: string; age: number }>();
+        expectTypeOf<User>().toEqualTypeOf<{ name: string; age: number }>();
+    });
+    it("infers optional primitive properties", () => {
+        const schema = optional(stringSchema);
+        expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<
+            string | undefined
+        >();
+    });
+    it("infers optional array properties", () => {
+        const schema = optional(array(stringSchema));
+        expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<
+            string[] | undefined
+        >();
+    });
+    it("infers nested arrays", () => {
+        const schema = array(array(array(stringSchema)));
+        expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<string[][][]>();
+    });
+    it("infers nested object", () => {
+        const schema = object({
+            id: stringSchema,
+            address: object({
+                city: stringSchema,
+                country: stringSchema,
+            }),
+        });
+        expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<{
+            id: string;
+            address: {
+                city: string;
+                country: string;
+            };
+        }>();
+    });
+    it("infers partial object", () => {
+        const schema = partial(
+            object({
+                id: stringSchema,
+            }),
+        );
+        expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<{
+            id: string;
+        }>();
+    });
+    it("infers union tables", () => {
+        const schema = array(union(stringSchema, numberSchema));
+        expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<
+            (string | number)[]
+        >();
     });
     it("infers optional properties", () => {
         const schema = object({
@@ -26,7 +75,7 @@ describe("Infer", () => {
             nickname: partial(stringSchema),
         });
         type User = Infer<typeof schema>;
-        expectTypeOf<User>().toExtend<{
+        expectTypeOf<User>().toEqualTypeOf<{
             name: string;
             age: number;
             nickname?: string;
@@ -43,7 +92,7 @@ describe("Infer", () => {
         });
 
         type Result = Infer<typeof schema>;
-        expectTypeOf<Result>().toExtend<{
+        expectTypeOf<Result>().toEqualTypeOf<{
             name: string;
             scores: number[];
             metadata: {
@@ -58,7 +107,7 @@ describe("Infer", () => {
         });
 
         type Result = Infer<typeof schema>;
-        expectTypeOf<Result>().toExtend<{
+        expectTypeOf<Result>().toEqualTypeOf<{
             id: string | number;
         }>();
     });

@@ -24,13 +24,13 @@ type UnionSchema = BaseSchema & {
         ...(keyof PrimitiveTypeMap)[],
     ];
 };
-type ObjectSchema = BaseSchema & {
-    type: "object";
-    properties: Record<
-        string,
-        PrimitiveSchema<BaseTypes> | ArraySchema<BaseTypes> | UnionSchema
-    >;
-};
+// type ObjectSchema = BaseSchema & {
+//     type: "object";
+//     properties: Record<
+//         string,
+//         PrimitiveSchema<BaseTypes> | ArraySchema<BaseTypes> | UnionSchema
+//     >;
+// };
 export const stringSchema = {
     type: BaseTypes.STRING,
 } as const;
@@ -40,23 +40,13 @@ export const numberSchema = {
 export const booleanSchema = {
     type: BaseTypes.BOOLEAN,
 } as const;
-export function optional<
-    T extends
-        | PrimitiveSchema<BaseTypes>
-        | UnionSchema
-        | ArraySchema<PrimitiveSchema<BaseTypes>>,
->(schema: T): Readonly<{ optional: true; type: T[SchemaTypeKey]; items: T }> {
-    return { optional: true, type: schema.type, items: schema };
+export function optional<T>(schema: T): Readonly<{ optional: true } & T> {
+    return { optional: true, ...schema };
 }
-export function array<
-    T extends
-        | PrimitiveSchema<BaseTypes>
-        | UnionSchema
-        | ArraySchema<PrimitiveSchema<BaseTypes>>,
->(schema: T): Readonly<{ type: "array"; items: T }> {
+export function array<T>(schema: T): Readonly<{ type: "array"; items: T }> {
     return {
         type: "array",
-        items: { ...schema, type: schema.type, optional: schema.optional },
+        items: { ...schema },
     };
 }
 export function union<
@@ -69,7 +59,9 @@ export function union<
     return { type: [firstSchema.type, secondSchema.type] };
 }
 
-export function object<T>(params: T): Readonly<{ type: "object"; properties: T }> {
+export function object<T>(
+    params: T,
+): Readonly<{ type: "object"; properties: T }> {
     return { type: "object", properties: { ...params } };
 }
 
@@ -78,26 +70,6 @@ export function partial<T extends PrimitiveSchema<BaseTypes>>(
 ): Readonly<{ partial: true; type: T[SchemaTypeKey] }> {
     return { partial: true, type: schema.type };
 }
-
-const optionalString = optional(stringSchema);
-const stringArray = array(stringSchema);
-const nestedArray = array(array(stringSchema));
-const idSchema = union(stringSchema, numberSchema);
-const complexSchema = array(union(stringSchema, booleanSchema));
-const userSchema = object({
-    id: numberSchema,
-    name: stringSchema,
-    email: optional(stringSchema),
-    roles: array(stringSchema),
-    nickname: partial(stringSchema),
-});
-const productSchema = object({
-    name: stringSchema,
-    price: numberSchema,
-    available: booleanSchema,
-});
-
-type OptionalTString = typeof userSchema;
 
 type ExtractType<T> = T extends keyof PrimitiveTypeMap
     ? PrimitiveTypeMap[T]
@@ -147,8 +119,11 @@ type PartialKeys<T> = {
 type NonPartialKeys<T> = {
     [K in keyof T]: IsPartialProperty<T[K]> extends false ? K : never;
 }[keyof T];
-type SelectPartialKeys<T> = InferPartialPropertyTypeMapper<T, PartialKeys<T>>
-type SelectNonPartialKeys<T> = InferNonPartialPropertyTypeMapper<T, NonPartialKeys<T>>
+type SelectPartialKeys<T> = InferPartialPropertyTypeMapper<T, PartialKeys<T>>;
+type SelectNonPartialKeys<T> = InferNonPartialPropertyTypeMapper<
+    T,
+    NonPartialKeys<T>
+>;
 type InferTypeMapper<T> = SelectNonPartialKeys<T> & SelectPartialKeys<T>;
 
 export type Infer<T> =
@@ -161,14 +136,3 @@ export type Infer<T> =
             : IsObject<T> extends true
               ? ApplySchemaOptionality<T, ExtractObject<T>>
               : never;
-
-type A = Infer<typeof stringSchema>; // string
-type B = Infer<typeof numberSchema>; // number
-type C = Infer<typeof booleanSchema>; // boolean
-type D = Infer<typeof optionalString>; // string | undefined
-type E = Infer<typeof stringArray>; // string[]
-type F = Infer<typeof nestedArray>; // string[][]
-type G = Infer<typeof idSchema>; // string | number
-type H = Infer<typeof complexSchema>; // (string | number)[]
-type User = Infer<typeof userSchema>;
-type Product = Infer<typeof productSchema>;
