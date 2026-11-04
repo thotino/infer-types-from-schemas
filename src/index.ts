@@ -17,9 +17,9 @@ interface ArraySchema<Item> extends BaseSchema {
     type: "array";
     items: Item;
 }
-interface ObjectSchema<Item> extends BaseSchema {
+interface ObjectSchema<Item extends Record<string, Schema>> extends BaseSchema {
     type: "object";
-    properties: { [x: string]: Item };
+    properties: Item;
 }
 interface UnionSchema<
     I extends PrimitiveSchema<BaseTypes>,
@@ -31,8 +31,7 @@ export type Schema =
     | PrimitiveSchema<BaseTypes>
     | UnionSchema<PrimitiveSchema<BaseTypes>, PrimitiveSchema<BaseTypes>>
     | ArraySchema<Schema>
-    | ObjectSchema<Schema>;
-
+    | ObjectSchema<Record<string, Schema>>;
 export const stringSchema = {
     type: BaseTypes.STRING,
 } as const;
@@ -42,6 +41,9 @@ export const numberSchema = {
 export const booleanSchema = {
     type: BaseTypes.BOOLEAN,
 } as const;
+
+
+
 export function optional<T extends Schema>(
     schema: T,
 ): Readonly<{ optional: true } & T> {
@@ -55,17 +57,14 @@ export function array<T extends Schema>(
         items: { ...schema },
     };
 }
-export function union<
-    T extends Schema,
-    U extends Schema,
->(
+export function union<T extends Schema, U extends Schema>(
     firstSchema: T,
     secondSchema: U,
 ): Readonly<{ type: [T[SchemaTypeKey], U[SchemaTypeKey]] }> {
     return { type: [firstSchema.type, secondSchema.type] };
 }
 
-export function object<T extends Schema>(
+export function object<T extends Record<string, Schema>>(
     params: T,
 ): Readonly<{ type: "object"; properties: T }> {
     return { type: "object", properties: { ...params } };
