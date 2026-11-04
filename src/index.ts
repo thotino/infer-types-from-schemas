@@ -42,8 +42,6 @@ export const booleanSchema = {
     type: BaseTypes.BOOLEAN,
 } as const;
 
-
-
 export function optional<T extends Schema>(
     schema: T,
 ): Readonly<{ optional: true } & T> {
@@ -66,7 +64,7 @@ export function union<T extends Schema, U extends Schema>(
 
 export function object<T extends Record<string, Schema>>(
     params: T,
-): Readonly<{ type: "object"; properties: T }> {
+): Readonly<ObjectSchema<T>> {
     return { type: "object", properties: { ...params } };
 }
 
