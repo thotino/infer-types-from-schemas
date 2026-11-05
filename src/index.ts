@@ -49,16 +49,16 @@ export function optional<T extends Schema>(
 }
 export function array<T extends Schema>(
     schema: T,
-): Readonly<{ type: "array"; items: T }> {
+): Readonly<ArraySchema<T>> {
     return {
         type: "array",
         items: { ...schema },
     };
 }
-export function union<T extends Schema, U extends Schema>(
+export function union<T extends PrimitiveSchema<BaseTypes>, U extends PrimitiveSchema<BaseTypes>>(
     firstSchema: T,
     secondSchema: U,
-): Readonly<{ type: [T[SchemaTypeKey], U[SchemaTypeKey]] }> {
+): Readonly<UnionSchema<T, U>> {
     return { type: [firstSchema.type, secondSchema.type] };
 }
 

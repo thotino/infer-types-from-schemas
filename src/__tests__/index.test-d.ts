@@ -101,7 +101,19 @@ describe("Infer", () => {
             };
         }>();
     });
-    it("infers unions", () => {
+    it("infers unions of different types", () => {
+        const schema = union(stringSchema, numberSchema);
+
+        type Result = Infer<typeof schema>;
+        expectTypeOf<Result>().toEqualTypeOf<string | number>();
+    });
+    it("infers unions of different types", () => {
+        const schema = union(stringSchema, stringSchema);
+
+        type Result = Infer<typeof schema>;
+        expectTypeOf<Result>().toEqualTypeOf<string>();
+    });
+    it("infers unions in objects", () => {
         const schema = object({
             id: union(stringSchema, numberSchema),
         });
