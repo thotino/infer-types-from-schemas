@@ -47,18 +47,16 @@ export function optional<T extends Schema>(
 ): Readonly<{ optional: true } & T> {
     return { optional: true, ...schema };
 }
-export function array<T extends Schema>(
-    schema: T,
-): Readonly<ArraySchema<T>> {
+export function array<T extends Schema>(schema: T): Readonly<ArraySchema<T>> {
     return {
         type: "array",
         items: { ...schema },
     };
 }
-export function union<T extends PrimitiveSchema<BaseTypes>, U extends PrimitiveSchema<BaseTypes>>(
-    firstSchema: T,
-    secondSchema: U,
-): Readonly<UnionSchema<T, U>> {
+export function union<
+    T extends PrimitiveSchema<BaseTypes>,
+    U extends PrimitiveSchema<BaseTypes>,
+>(firstSchema: T, secondSchema: U): Readonly<UnionSchema<T, U>> {
     return { type: [firstSchema.type, secondSchema.type] };
 }
 
@@ -92,15 +90,16 @@ type ApplySchemaOptionality<S, V> =
 type IsArray<T> = T extends Readonly<{ type: "array" }> ? true : false;
 type ExtractArray<T> = T extends ArraySchema<infer I> ? Infer<I>[] : never;
 
+type TestUnionElements<U, V> = [U] extends [keyof PrimitiveTypeMap]
+    ? [V] extends [keyof PrimitiveTypeMap]
+        ? true
+        : false
+    : false;
 type IsUnion<T> =
     T extends Readonly<{
-        type: [
-            keyof PrimitiveTypeMap,
-            keyof PrimitiveTypeMap,
-            ...(keyof PrimitiveTypeMap)[],
-        ];
+        type: [infer I, infer J, ...unknown[]];
     }>
-        ? true
+        ? TestUnionElements<I, J>
         : false;
 type ExtractUnion<T> =
     T extends Readonly<{ type: [...(infer I)[]] }> ? ExtractType<I> : never;

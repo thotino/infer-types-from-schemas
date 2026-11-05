@@ -52,14 +52,68 @@ describe("Infer", () => {
             };
         }>();
     });
-    it("infers partial object", () => {
-        const schema = partial(
-            object({
-                id: stringSchema,
-            }),
-        );
+    it("infers object with partial and optional properties", () => {
+        const schema = object({
+            name: stringSchema,
+            age: partial(numberSchema),
+            email: optional(stringSchema),
+        });
         expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<{
-            id: string;
+            name: string;
+            age?: number;
+            email: string | undefined;
+        }>();
+    });
+    it("infers object with partial nested objects", () => {
+        const schema = object({
+            user: partial(
+                object({
+                    name: stringSchema,
+                    age: numberSchema,
+                }),
+            ),
+        });
+        expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<{
+            user?: {
+                name: string;
+                age: number;
+            };
+        }>();
+    });
+    it("infers object with partial and optional nested objects", () => {
+        const schema = object({
+            user: partial(
+                optional(
+                    object({
+                        name: stringSchema,
+                    }),
+                ),
+            ),
+        });
+        expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<{
+            user?:
+                | {
+                      name: string;
+                  }
+                | undefined;
+        }>();
+    });
+    it("infers object with partial and optional nested objects by commutating the helpers", () => {
+        const schema = object({
+            user: optional(
+                partial(
+                    object({
+                        name: stringSchema,
+                    }),
+                ),
+            ),
+        });
+        expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<{
+            user?:
+                | {
+                      name: string;
+                  }
+                | undefined;
         }>();
     });
     it("infers union tables", () => {
@@ -68,7 +122,7 @@ describe("Infer", () => {
             (string | number)[]
         >();
     });
-    it("infers optional properties", () => {
+    it("infers object with partial properties", () => {
         const schema = object({
             name: stringSchema,
             age: numberSchema,
